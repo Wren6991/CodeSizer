@@ -485,9 +485,12 @@ def render_tab3(disasm, stacks):
             scope_cls = "s" + (" h" if head else "")
             row_id = f' id="d-{id_hex}"' if id_hex else ""
             text = "\n".join(lines)
+            # The unicode character is a left-to-right mark (LRM). We use RTL text so that the left
+            # end of the scope gets ellipsised on overflow; without the LRM this results in e.g.
+            # `__vectors` being rendered as `vectors__`
             rows.append(
                 f'<div class="{cls}"{row_id}>'
-                f'<span class="{scope_cls}">{esc(scope)}</span>'
+                f'<span class="{scope_cls}">\u200e{esc(scope)}</span>'
                 f'<span class="d">{esc(text)}</span>'
                 f'</div>'
             )
