@@ -289,10 +289,9 @@ a { color: var(--accent-cyan); }
 /* ---- Tab 3: disassembly ---- */
 /* Use stupidly short class names here because it's a large fraction of the file size! */
 .dl { font-family: var(--font-mono); font-size: 11px; }
-.dh { display: flex; position: sticky; top: 0; background: var(--bg-panel); color: var(--accent-blue); z-index: 5; }
+.dh { display: flex; top: 0; background: var(--bg-panel); color: var(--accent-blue); z-index: 5; }
 .dh .s, .dh .d { flex: 1 1 0; padding: 3px 6px; }
 .r { display: flex; }
-.r:hover { background: var(--bg-hover); }
 .r.ss { border-top: 1px solid var(--border-subtle); }
 .r .s { flex: 0 0 33.333%; min-height: 1.4em; padding: 1px 6px; color: var(--accent-yellow); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; }
 .r .s.h { color: var(--accent-green); }
@@ -474,35 +473,53 @@ def render_tab3(disasm, stacks):
     rows = []
     last_scope = None
     seen_single = set()
-    for line in disasm.splitlines():
+    scope = ""
+    head = False
+    id_hex = None
+    lines = []
+
+    def flush():
+        nonlocal scope, head, id_hex, lines
+        if lines:
+            cls = "r" + (" ss" if scope else "")
+            scope_cls = "s" + (" h" if head else "")
+            row_id = f' id="d-{id_hex}"' if id_hex else ""
+            text = "\n".join(lines)
+            rows.append(
+                f'<div class="{cls}"{row_id}>'
+                f'<span class="{scope_cls}">{esc(scope)}</span>'
+                f'<span class="d">{esc(text)}</span>'
+                f'</div>'
+            )
         scope = ""
         head = False
+        id_hex = None
+        lines = []
+
+    # One div emitted per scope change; this means all addresses referenced by
+    # tab 1 -> tab 3 links will have an associated div, since they target
+    # the *first* instance of a scope with a matching prefix.
+    for line in disasm.splitlines():
         m = _ADDR_LINE_RE.match(line)
         if m:
-            addr = int(m.group(1), 16)
-            stack = stacks.get(addr)
-            if stack:
-                path = "/".join(name for name, _, _ in reversed(stack))
-                if path != last_scope:
-                    scope = path
-                    if "/" not in path and path not in seen_single:
-                        seen_single.add(path)
-                        head = True
+            stack = stacks.get(int(m.group(1), 16))
+            path = "/".join(n for n, _, _ in reversed(stack)) if stack else None
+            if path != last_scope:
+                flush()
+                scope = path or ""
+                id_hex = m.group(1)
+                if path is not None and "/" not in path and path not in seen_single:
+                    seen_single.add(path)
+                    head = True
                 last_scope = path
-            else:
-                last_scope = None
-        cls = "r" + (" ss" if scope else "")
-        scope_cls = "s" + (" h" if head else "")
-        row_id = f' id="d-{m.group(1)}"' if m else ""
-        rows.append(
-            f'<div class="{cls}"{row_id}>'
-            f'<span class="{scope_cls}">{esc(scope)}</span>'
-            f'<span class="d">{esc(line)}</span>'
-            f'</div>'
-        )
+            lines.append(line)
+        else:
+            lines.append(line)
+    flush()
+
     body = "\n".join(rows)
     return f"""
-    <div class="summary">The left column shows the inline call stack (outermost/innermost). It's blank if there's no change from the previous instruction.</div>
+    <div class="summary">The left column shows the inline call stack (outermost/innermost), shown only when it changes; subsequent disassembly lines are grouped beneath it.</div>
     <div class="dl">
       <div class="dh">
         <span class="s">Inline scope</span>
