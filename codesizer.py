@@ -87,10 +87,7 @@ def parse_addr2line(output):
             else:
                 fileline = "??:0"
             fileline = _DISCRIMINATOR_RE.sub("", fileline)
-            if ":" in fileline:
-                file, _, line = fileline.rpartition(":")
-            else:
-                file, line = split_file_line(fileline)
+            file, _, line = fileline.rpartition(":")
             frames.append((name, file, line))
         stacks[addr] = frames
     return stacks
