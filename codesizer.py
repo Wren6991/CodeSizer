@@ -632,6 +632,21 @@ def main(argv=None):
         if a >= symbols[idx]["addr"] + symbols[idx]["size"]:
             continue
         addrs_by_sym[idx].append(a)
+
+    # Restore clone suffixes (like *.constprop.0) stripped by addr2line.
+    # Stripping is ambiguous since they're genuinely different implementations
+    # in the ELF file. Heuristic: if outer scope name is a dot-separated prefix
+    # of the enclosing ELF symbol name, set scope name to symbol name.
+    for idx, sym in enumerate(symbols):
+        sym_name = sym["name"]
+        for addr in addrs_by_sym[idx]:
+            stack = stacks.get(addr)
+            if not stack:
+                continue
+            outer_name, outer_file, outer_line = stack[-1]
+            if outer_name and sym_name.startswith(outer_name + "."):
+                stacks[addr][-1] = (sym_name, outer_file, outer_line)
+
     symbols_with_trees = []
     for idx, sym in enumerate(symbols):
         root = build_symbol_tree(sym, addrs_by_sym[idx], stacks, instr_by_addr)
