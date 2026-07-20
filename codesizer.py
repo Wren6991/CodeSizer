@@ -520,6 +520,7 @@ def render_html(tab1_html, tab2_html, tab3_html, elf_name, total_instr_bytes):
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{esc(elf_name)} &middot; codesizer</title>
 <style>{CSS}</style>
+<script>{JS}</script>
 </head>
 <body>
 <header>
@@ -535,7 +536,6 @@ def render_html(tab1_html, tab2_html, tab3_html, elf_name, total_instr_bytes):
 <div id="page-flat" class="tab-page">{tab2_html}</div>
 <div id="page-disasm" class="tab-page">{tab3_html}</div>
 </div>
-<script>{JS}</script>
 </body>
 </html>
 """
